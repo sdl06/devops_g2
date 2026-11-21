@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .routers import bills, tables
+from .routers import bills, dishes, ingredients, tables
 
 # Send logs to stdout at INFO level (the brief asks for this, Azure collects it)
 logging.basicConfig(
@@ -45,6 +45,8 @@ def health():
 
 app.include_router(tables.router)
 app.include_router(bills.router)
+app.include_router(dishes.router)
+app.include_router(ingredients.router)
 
 
 # ---------- error format: always {"error": "message"} ----------
