@@ -1,74 +1,60 @@
-"""Data owned by Split Service; bill and item IDs belong to Bill Service."""
-
+"""Split-owned records; bill and item IDs refer to Bill Service."""
 import uuid
+from datetime import datetime, timezone
+from flask_sqlalchemy import SQLAlchemy
 
-from django.core.validators import MinValueValidator
-from django.db import models
-from django.db.models import Q
+db = SQLAlchemy()
+def new_id():
+    return str(uuid.uuid4())
+def now():
+    return datetime.now(timezone.utc)
 
+class SplitSession(db.Model):
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    bill_id = db.Column(db.String(100), unique=True, nullable=False)
+    bill_version = db.Column(db.String(100), nullable=False)
+    split_version = db.Column(db.BigInteger, default=0, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=now, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=now, onupdate=now, nullable=False)
+    participants = db.relationship('Participant', back_populates='session', cascade='all, delete-orphan')
+    __table_args__ = (db.CheckConstraint('split_version >= 0'),)
 
-class SplitSession(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    bill_id = models.CharField(max_length=100, unique=True)
-    bill_version = models.CharField(max_length=100)
-    split_version = models.PositiveBigIntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+class Participant(db.Model):
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    session_id = db.Column(db.String(36), db.ForeignKey('split_session.id'), nullable=False, index=True)
+    display_name = db.Column(db.String(100), nullable=False)
+    resume_token = db.Column(db.String(36), unique=True, nullable=False, default=new_id)
+    joined_at = db.Column(db.DateTime(timezone=True), default=now, nullable=False)
+    session = db.relationship('SplitSession', back_populates='participants')
+    allocations = db.relationship('Allocation', back_populates='participant', cascade='all, delete-orphan')
 
-    def __str__(self):
-        return f"Split for bill {self.bill_id}"
+class Allocation(db.Model):
+    id = db.Column(db.String(36), primary_key=True, default=new_id)
+    participant_id = db.Column(db.String(36), db.ForeignKey('participant.id'), nullable=False, index=True)
+    item_id = db.Column(db.String(100), nullable=False)
+    quantity = db.Column(db.Numeric(15, 6), nullable=False)
+    needs_review = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=now, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=now, onupdate=now, nullable=False)
+    participant = db.relationship('Participant', back_populates='allocations')
+    __table_args__ = (db.UniqueConstraint('participant_id', 'item_id', name='unique_participant_item'), db.CheckConstraint('quantity > 0', name='allocation_positive_quantity'))
 
+class Tip(db.Model):
+    class Kind:
+        FIXED = 'fixed'
+        PERCENT = 'percent'
+        values = ('fixed', 'percent')
+    participant_id = db.Column(db.String(36), db.ForeignKey('participant.id'), primary_key=True)
+    kind = db.Column(db.String(7), nullable=False)
+    value = db.Column(db.Integer, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=now, onupdate=now, nullable=False)
+    __table_args__ = (db.CheckConstraint("value >= 0 AND (kind = 'fixed' OR (kind = 'percent' AND value <= 10000))", name='valid_tip'),)
 
-class Participant(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    session = models.ForeignKey(SplitSession, on_delete=models.CASCADE, related_name="participants")
-    display_name = models.CharField(max_length=100)
-    resume_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    joined_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.display_name
-
-
-class Allocation(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name="allocations")
-    item_id = models.CharField(max_length=100)
-    # One whole item is 1.000000; fractions permit shared items.
-    quantity = models.DecimalField(max_digits=15, decimal_places=6, validators=[MinValueValidator(0.000001)])
-    needs_review = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["participant", "item_id"], name="unique_participant_item"),
-            models.CheckConstraint(condition=Q(quantity__gt=0), name="allocation_positive_quantity"),
-        ]
-
-
-class Tip(models.Model):
-    class Kind(models.TextChoices):
-        PERCENT = "percent", "Percent"
-        FIXED = "fixed", "Fixed amount"
-
-    participant = models.OneToOneField(Participant, on_delete=models.CASCADE, related_name="tip", primary_key=True)
-    kind = models.CharField(max_length=7, choices=Kind.choices)
-    # Percent uses basis points (10000 = 100%); fixed uses integer cents.
-    value = models.PositiveIntegerField()
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        constraints = [models.CheckConstraint(
-            condition=Q(kind="fixed") | Q(kind="percent", value__lte=10000),
-            name="tip_percent_at_most_100",
-        )]
-
-
-class Settlement(models.Model):
-    participant = models.OneToOneField(Participant, on_delete=models.CASCADE, related_name="settlement", primary_key=True)
-    amount_cents = models.PositiveBigIntegerField()
-    bill_version = models.CharField(max_length=100)
-    split_version = models.PositiveBigIntegerField()
-    settled_at = models.DateTimeField(auto_now_add=True)
-    needs_review = models.BooleanField(default=False)
+class Settlement(db.Model):
+    participant_id = db.Column(db.String(36), db.ForeignKey('participant.id'), primary_key=True)
+    amount_cents = db.Column(db.BigInteger, nullable=False)
+    bill_version = db.Column(db.String(100), nullable=False)
+    split_version = db.Column(db.BigInteger, nullable=False)
+    settled_at = db.Column(db.DateTime(timezone=True), default=now, nullable=False)
+    needs_review = db.Column(db.Boolean, default=False, nullable=False)
+    __table_args__ = (db.CheckConstraint('amount_cents >= 0 AND split_version >= 0'),)
