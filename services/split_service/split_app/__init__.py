@@ -22,7 +22,7 @@ def create_app(config=None):
         app.config.update(config)
     db.init_app(app)
     Migrate(app, db)
-    from .views import api
+    from .routers import api
     app.register_blueprint(api, url_prefix='/api')
 
     @app.before_request

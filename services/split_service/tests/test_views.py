@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 from concurrent.futures import ThreadPoolExecutor
 from split_app import create_app
 from split_app.models import db, Allocation, SplitSession
-from split_app.views import _bill
+from split_app.bill_service import _bill
 
 BILL = {'id': 12, 'version': 3, 'status': 'open', 'items': [{'id': 31, 'quantity': 1, 'price_cents': 1000}]}
 
@@ -15,7 +15,7 @@ class ViewsTest(unittest.TestCase):
         self.app = create_app({'TESTING': True, 'SECRET_KEY': 'test-secret', 'SQLALCHEMY_DATABASE_URI': 'sqlite:///' + str(Path(self.directory.name) / 'test.db')})
         with self.app.app_context():
             db.create_all()
-        self.mock = patch('split_app.views._bill', return_value=BILL)
+        self.mock = patch('split_app.bill_service._bill', return_value=BILL)
         self.mock.start()
         self.addCleanup(self.mock.stop)
         self.addCleanup(self.directory.cleanup)
@@ -47,7 +47,7 @@ class ViewsTest(unittest.TestCase):
 
     def test_upstream_failure_rolls_back(self):
         client, headers = self.guest()
-        with patch('split_app.views._bill', side_effect=[BILL, None]):
+        with patch('split_app.bill_service._bill', side_effect=[BILL, None]):
             response = client.post('/api/bills/12/claims', json={'item_id': 31, 'quantity': '1', 'bill_version': 3, 'split_version': 0}, headers=headers)
         self.assertEqual(response.status_code, 503)
         with self.app.app_context():
@@ -64,7 +64,7 @@ class ViewsTest(unittest.TestCase):
     def test_bill_url_has_no_trailing_slash(self):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = '{"id":12}'
-        with self.app.app_context(), patch('split_app.views.urlopen', return_value=response) as upstream:
+        with self.app.app_context(), patch('split_app.bill_service.urlopen', return_value=response) as upstream:
             self.app.config['BILL_SERVICE_URL'] = 'http://bill:8000/'
             self.assertEqual(_bill(12), {'id': 12})
             upstream.assert_called_once_with('http://bill:8000/bills/12', timeout=3)
@@ -122,7 +122,7 @@ class ViewsTest(unittest.TestCase):
         self.assertTrue(client.get(base + '/progress', headers=staff).json['ready_to_close'])
         self.assertEqual(client.delete(base + '/claims/' + claim.json['allocation_id'],
                                        headers=headers, json={**data, 'split_version': 2}).status_code, 409)
-        with patch('split_app.views._bill', return_value={**BILL, 'version': 4}):
+        with patch('split_app.bill_service._bill', return_value={**BILL, 'version': 4}):
             progress = client.get(base + '/progress', headers=staff).json
             self.assertTrue(progress['needs_review'])
             self.assertFalse(progress['ready_to_close'])

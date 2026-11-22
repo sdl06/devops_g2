@@ -1,6 +1,6 @@
 # Split Service API
 
-Implemented Flask endpoints, checked against `services/split_service/split_app/views.py`
+Implemented Flask endpoints, checked against `services/split_service/split_app/routers/`
 and `split_app/__init__.py` on 22 November 2026.
 
 ## Conventions
