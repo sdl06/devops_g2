@@ -91,9 +91,7 @@ class DishIngredient(Base):
     dish_id: Mapped[int] = mapped_column(
         ForeignKey("dishes.id", ondelete="CASCADE"), primary_key=True
     )
-    ingredient_id: Mapped[int] = mapped_column(
-        ForeignKey("ingredients.id"), primary_key=True
-    )
+    ingredient_id: Mapped[int] = mapped_column(ForeignKey("ingredients.id"), primary_key=True)
     amount: Mapped[int]
 
     dish: Mapped[Dish] = relationship(back_populates="ingredients")

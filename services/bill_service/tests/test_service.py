@@ -2,10 +2,9 @@
 
 import logging
 
-from sqlalchemy.exc import OperationalError
-
 from app.db import get_db
 from app.main import app
+from sqlalchemy.exc import OperationalError
 
 
 def test_health(client):

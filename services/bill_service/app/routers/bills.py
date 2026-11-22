@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..db import get_db
+from ..db import DbSession
 from ..models import Bill, BillItem, DiningTable, Dish
 from ..schemas import BillIn, BillOut, ItemIn, ItemOut, ItemUpdate
 
@@ -37,8 +37,7 @@ def save(db: Session, bill: Bill) -> Bill:
 
 # ---------- bills ----------
 @router.get("", response_model=list[BillOut])
-def list_bills(status: str | None = None, table_id: int | None = None,
-               db: Session = Depends(get_db)):
+def list_bills(db: DbSession, status: str | None = None, table_id: int | None = None):
     query = select(Bill).order_by(Bill.id)
     if status:
         query = query.where(Bill.status == status)
@@ -48,7 +47,7 @@ def list_bills(status: str | None = None, table_id: int | None = None,
 
 
 @router.post("", response_model=BillOut, status_code=201)
-def create_bill(data: BillIn, db: Session = Depends(get_db)):
+def create_bill(data: BillIn, db: DbSession):
     require_table(db, data.table_id)
     bill = Bill(table_id=data.table_id, status="draft", version=1)
     db.add(bill)
@@ -58,12 +57,12 @@ def create_bill(data: BillIn, db: Session = Depends(get_db)):
 
 
 @router.get("/{bill_id}", response_model=BillOut)
-def get_bill(bill_id: int, db: Session = Depends(get_db)):
+def get_bill(bill_id: int, db: DbSession):
     return get_bill_or_404(db, bill_id)
 
 
 @router.put("/{bill_id}", response_model=BillOut)
-def update_bill(bill_id: int, data: BillIn, db: Session = Depends(get_db)):
+def update_bill(bill_id: int, data: BillIn, db: DbSession):
     bill = get_bill_or_404(db, bill_id)
     require_not_closed(bill)
     require_table(db, data.table_id)
@@ -72,7 +71,7 @@ def update_bill(bill_id: int, data: BillIn, db: Session = Depends(get_db)):
 
 
 @router.delete("/{bill_id}", status_code=204)
-def delete_bill(bill_id: int, db: Session = Depends(get_db)):
+def delete_bill(bill_id: int, db: DbSession):
     bill = get_bill_or_404(db, bill_id)
     if bill.status != "draft":
         raise HTTPException(409, "Only draft bills can be deleted")
@@ -81,7 +80,7 @@ def delete_bill(bill_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{bill_id}/open", response_model=BillOut)
-def open_bill(bill_id: int, db: Session = Depends(get_db)):
+def open_bill(bill_id: int, db: DbSession):
     bill = get_bill_or_404(db, bill_id)
     if bill.status != "draft":
         raise HTTPException(409, "Only draft bills can be opened")
@@ -97,7 +96,7 @@ def open_bill(bill_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{bill_id}/close", response_model=BillOut)
-def close_bill(bill_id: int, db: Session = Depends(get_db)):
+def close_bill(bill_id: int, db: DbSession):
     bill = get_bill_or_404(db, bill_id)
     if bill.status != "open":
         raise HTTPException(409, "Only open bills can be closed")
@@ -114,15 +113,20 @@ def get_item_or_404(db: Session, bill_id: int, item_id: int) -> BillItem:
 
 
 @router.post("/{bill_id}/items", response_model=ItemOut, status_code=201)
-def add_item(bill_id: int, data: ItemIn, db: Session = Depends(get_db)):
+def add_item(bill_id: int, data: ItemIn, db: DbSession):
     bill = get_bill_or_404(db, bill_id)
     require_not_closed(bill)
     dish = db.get(Dish, data.dish_id)
     if dish is None:
         raise HTTPException(404, "Dish not found")
     # Copy name and price, so later menu changes don't change this bill.
-    item = BillItem(bill_id=bill.id, dish_id=dish.id, name=dish.name,
-                    quantity=data.quantity, price_cents=dish.price_cents)
+    item = BillItem(
+        bill_id=bill.id,
+        dish_id=dish.id,
+        name=dish.name,
+        quantity=data.quantity,
+        price_cents=dish.price_cents,
+    )
     db.add(item)
     save(db, bill)
     db.refresh(item)
@@ -130,7 +134,7 @@ def add_item(bill_id: int, data: ItemIn, db: Session = Depends(get_db)):
 
 
 @router.put("/{bill_id}/items/{item_id}", response_model=ItemOut)
-def update_item(bill_id: int, item_id: int, data: ItemUpdate, db: Session = Depends(get_db)):
+def update_item(bill_id: int, item_id: int, data: ItemUpdate, db: DbSession):
     bill = get_bill_or_404(db, bill_id)
     require_not_closed(bill)
     item = get_item_or_404(db, bill_id, item_id)
@@ -141,7 +145,7 @@ def update_item(bill_id: int, item_id: int, data: ItemUpdate, db: Session = Depe
 
 
 @router.delete("/{bill_id}/items/{item_id}", status_code=204)
-def delete_item(bill_id: int, item_id: int, db: Session = Depends(get_db)):
+def delete_item(bill_id: int, item_id: int, db: DbSession):
     bill = get_bill_or_404(db, bill_id)
     require_not_closed(bill)
     item = get_item_or_404(db, bill_id, item_id)
