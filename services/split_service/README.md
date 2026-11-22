@@ -2,6 +2,29 @@
 
 Flask API with SQLAlchemy persistence and Alembic migrations. Bill Service owns bills and items; this service stores sessions, participants, allocations, tips and simulated settlements.
 
+## Run with Docker
+
+Start Docker Desktop, then run these commands from the repository root. Docker
+installs Flask and the other Python dependencies inside the image.
+
+```sh
+docker build -t easypay-split services/split_service
+docker volume create easypay-split-data
+export SPLIT_SECRET_KEY="$(openssl rand -hex 32)"
+docker run --rm --name easypay-split \
+  -p 127.0.0.1:8001:8001 \
+  -v easypay-split-data:/data \
+  -e SECRET_KEY="$SPLIT_SECRET_KEY" \
+  -e BILL_SERVICE_URL=http://host.docker.internal:8000 \
+  easypay-split
+```
+
+The container calls `start.sh` to apply database migrations and launch Gunicorn on port 8001. From a second terminal, run `curl -fsS http://localhost:8001/health` and expect `{"status":"ok"}`. Press Ctrl+C in the first terminal to stop the container. The named volume keeps your local SQLite data. Reuse the same secret across restarts if you want existing browser sessions to keep working.
+
+Health works independently of Bill Service. For guest requests, run Bill Service on host port 8000 or set `BILL_SERVICE_URL` to its reachable URL. `host.docker.internal` is the Docker Desktop address for your host machine.
+
+This image ships with SQLite for local use. A deployment using Azure SQL needs its database driver and `DATABASE_URL`. Coordinate migrations as a single release step before running multiple replicas.
+
 ## Local setup
 
 Run from `services/split_service`:
