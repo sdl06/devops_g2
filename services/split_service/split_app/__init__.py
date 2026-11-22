@@ -14,6 +14,7 @@ def create_app(config=None):
         SECRET_KEY=os.environ.get('SECRET_KEY') or secrets.token_hex(32),
         SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL', 'sqlite:///' + str(Path(__file__).resolve().parent.parent / 'split.sqlite3')),
         BILL_SERVICE_URL=os.environ.get('BILL_SERVICE_URL', ''),
+        STAFF_API_TOKEN=os.environ.get('STAFF_API_TOKEN', ''),
         SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
         SESSION_COOKIE_SECURE=os.environ.get('COOKIE_SECURE', 'false').lower() == 'true',
     )

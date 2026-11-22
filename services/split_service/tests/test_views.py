@@ -68,3 +68,61 @@ class ViewsTest(unittest.TestCase):
             self.app.config['BILL_SERVICE_URL'] = 'http://bill:8000/'
             self.assertEqual(_bill(12), {'id': 12})
             upstream.assert_called_once_with('http://bill:8000/bills/12', timeout=3)
+
+    def test_change_claim_requires_owner_and_current_version(self):
+        owner, headers = self.guest()
+        other, other_headers = self.guest()
+        base = '/api/bills/12'
+        version = {'bill_version': '3', 'split_version': 0}
+        claim = owner.post(base + '/claims', headers=headers,
+                           json={**version, 'item_id': 31, 'quantity': '0.5'})
+        path = base + '/claims/' + claim.json['allocation_id']
+        self.assertEqual(owner.get(base + '/allocations').json['claims'][0]['allocation_id'],
+                         claim.json['allocation_id'])
+        self.assertEqual(other.delete(path, headers=other_headers,
+                                      json={**version, 'split_version': 1}).status_code, 404)
+        self.assertEqual(owner.put(path, headers=headers,
+                                   json={**version, 'quantity': '0.75'}).status_code, 409)
+        self.assertEqual(owner.put(path, headers=headers, json={
+            **version, 'split_version': 1, 'quantity': '1.1'
+        }).status_code, 409)
+        result = owner.put(path, headers=headers, json={
+            **version, 'split_version': 1, 'quantity': '0.75'
+        })
+        self.assertEqual(result.json['split_version'], 2)
+        self.assertEqual(owner.get(base + '/balance').json['total_cents'], 750)
+        result = owner.delete(path, headers=headers, json={**version, 'split_version': 2})
+        self.assertTrue(result.json['deleted'])
+        self.assertEqual(owner.get(base + '/balance').json['total_cents'], 0)
+
+    def test_progress_and_settlement_use_current_amount(self):
+        client, headers = self.guest()
+        base = '/api/bills/12'
+        self.app.config['STAFF_API_TOKEN'] = 'staff-test'
+        staff = {'Authorization': 'Bearer staff-test'}
+        self.assertEqual(client.get(base + '/progress').status_code, 401)
+        self.assertEqual(client.get(base + '/progress', headers=staff).json[
+            'unallocated_subtotal_cents'], 1000)
+
+        claim = client.post(base + '/claims', headers=headers, json={
+            'bill_version': '3', 'split_version': 0, 'item_id': 31, 'quantity': '1'
+        })
+        self.assertEqual(claim.status_code, 201)
+        balance = client.get(base + '/balance').json
+        self.assertEqual(balance['total_cents'], 1000)
+        self.assertEqual(client.get(base + '/progress', headers=staff).json[
+            'allocated_unsettled_subtotal_cents'], 1000)
+        client.post(base + '/tip', headers=headers, json={'kind': 'fixed', 'value': 200})
+        data = {'bill_version': '3', 'split_version': 1, 'amount_cents': 1000}
+        self.assertEqual(client.post(base + '/settlement', headers=headers, json=data).status_code, 409)
+        data['amount_cents'] = 1200
+        self.assertEqual(client.post(base + '/settlement', headers=headers, json=data).status_code, 201)
+        self.assertEqual(client.post(base + '/settlement', headers=headers, json=data).status_code, 200)
+        self.assertEqual(client.get(base + '/participants/me').json['settlement']['amount_cents'], 1200)
+        self.assertTrue(client.get(base + '/progress', headers=staff).json['ready_to_close'])
+        self.assertEqual(client.delete(base + '/claims/' + claim.json['allocation_id'],
+                                       headers=headers, json={**data, 'split_version': 2}).status_code, 409)
+        with patch('split_app.views._bill', return_value={**BILL, 'version': 4}):
+            progress = client.get(base + '/progress', headers=staff).json
+            self.assertTrue(progress['needs_review'])
+            self.assertFalse(progress['ready_to_close'])

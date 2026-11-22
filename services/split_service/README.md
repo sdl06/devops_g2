@@ -43,7 +43,7 @@ Claims send `item_id`, `quantity`, `bill_version`, and `split_version`. A condit
 
 Bill Service and Split Service have separate databases. A second bill check narrows the race with staff edits, but cannot make the two databases atomic. Bill correction and settlement reconciliation still need the agreed team policy.
 
-Settlement functions remain in the locally ignored `remaining_views.py` until reviewed. The older PDF describes the Django version and is historical.
+See the [Split Service API guide](../../docs/api/split-service.md) for balance, claim edits, settlement, progress and guest restoration. Set `STAFF_API_TOKEN` to enable the staff progress endpoint.
 
 ## Verification
 
