@@ -1,0 +1,16 @@
+.git
+.venv
+venv
+**/__pycache__/
+**/*.py[cod]
+**/.DS_Store
+**/.env
+**/.env.*
+**/*.sqlite3*
+**/*.db
+.coverage*
+htmlcov/
+.pytest_cache
+output/
+tests/
+split_app/remaining_views.py
