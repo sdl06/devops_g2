@@ -7,7 +7,7 @@ from sqlalchemy import update
 
 from ..models import Participant, SplitSession, db
 
-api = Blueprint('split', __name__)
+api = Blueprint("split", __name__)
 
 
 def _error(message, status):
@@ -36,19 +36,24 @@ def _guest(bill_id):
 
 
 def _valid_version(data):
-    version = data.get('split_version')
+    version = data.get("split_version")
     return type(version) is int and 0 <= version < 2**63 - 1
 
 
 def _matching_bill(bill, bill_id, data):
-    return (str(bill.get('id')) == bill_id and bill.get('status') == 'open'
-            and str(bill['version']) == str(data.get('bill_version')))
+    return (
+        str(bill.get("id")) == bill_id
+        and bill.get("status") == "open"
+        and str(bill["version"]) == str(data.get("bill_version"))
+    )
 
 
 def _advance_split(split, expected, **values):
-    result = db.session.execute(update(SplitSession).where(
-        SplitSession.id == split.id, SplitSession.split_version == expected
-    ).values(split_version=SplitSession.split_version + 1, **values))
+    result = db.session.execute(
+        update(SplitSession)
+        .where(SplitSession.id == split.id, SplitSession.split_version == expected)
+        .values(split_version=SplitSession.split_version + 1, **values)
+    )
     return result.rowcount == 1
 
 
@@ -60,5 +65,9 @@ def _claim_error(message, status=409):
 def _settlement_data(settlement):
     if settlement is None:
         return None
-    return {'amount_cents':settlement.amount_cents, 'bill_version':settlement.bill_version,
-                'split_version':settlement.split_version, 'needs_review':settlement.needs_review}
+    return {
+        "amount_cents": settlement.amount_cents,
+        "bill_version": settlement.bill_version,
+        "split_version": settlement.split_version,
+        "needs_review": settlement.needs_review,
+    }
