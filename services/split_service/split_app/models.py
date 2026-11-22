@@ -1,13 +1,14 @@
 """Split-owned records; bill and item IDs refer to Bill Service."""
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 def new_id():
     return str(uuid.uuid4())
 def now():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 class SplitSession(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=new_id)

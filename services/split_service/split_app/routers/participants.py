@@ -2,7 +2,8 @@
 
 import secrets
 
-from flask import current_app, jsonify, request, session as browser_session
+from flask import current_app, jsonify, request
+from flask import session as browser_session
 from sqlalchemy.exc import IntegrityError
 
 from .. import bill_service
@@ -66,7 +67,7 @@ def current_participant(bill_id):
     tip = db.session.get(Tip, participant.id)
     result = jsonify(session_id=split.id, participant_id=participant.id,
                      display_name=participant.display_name,
-                     tip=dict(kind=tip.kind, value=tip.value) if tip else None,
+                     tip={'kind':tip.kind, 'value':tip.value} if tip else None,
                      settlement=_settlement_data(db.session.get(Settlement, participant.id)))
     result.headers['Cache-Control'] = 'no-store'
     return result

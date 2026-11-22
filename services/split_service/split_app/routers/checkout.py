@@ -10,8 +10,16 @@ from .. import bill_service
 from ..balances import _allocations, _balance, _split_amounts, _with_tip
 from ..models import Settlement, SplitSession, Tip, db
 from .common import (
-    _advance_split, _body, _claim_error, _error, _guest, _matching_bill,
-    _participant, _settlement_data, _valid_version, api,
+    _advance_split,
+    _body,
+    _claim_error,
+    _error,
+    _guest,
+    _matching_bill,
+    _participant,
+    _settlement_data,
+    _valid_version,
+    api,
 )
 
 

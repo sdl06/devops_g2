@@ -60,5 +60,5 @@ def _claim_error(message, status=409):
 def _settlement_data(settlement):
     if settlement is None:
         return None
-    return dict(amount_cents=settlement.amount_cents, bill_version=settlement.bill_version,
-                split_version=settlement.split_version, needs_review=settlement.needs_review)
+    return {'amount_cents':settlement.amount_cents, 'bill_version':settlement.bill_version,
+                'split_version':settlement.split_version, 'needs_review':settlement.needs_review}

@@ -9,8 +9,15 @@ from .. import bill_service
 from ..balances import _allocations
 from ..models import Allocation, Participant, Settlement, SplitSession, db
 from .common import (
-    _advance_split, _body, _claim_error, _error, _guest, _matching_bill,
-    _participant, _valid_version, api,
+    _advance_split,
+    _body,
+    _claim_error,
+    _error,
+    _guest,
+    _matching_bill,
+    _participant,
+    _valid_version,
+    api,
 )
 
 
