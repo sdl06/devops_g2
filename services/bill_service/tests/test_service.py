@@ -31,3 +31,20 @@ def test_database_down_returns_503_not_a_crash(client):
     response = client.get("/tables")
     assert response.status_code == 503
     assert response.json() == {"error": "Database is unavailable. Try again shortly."}
+
+
+def test_cors_allows_the_ui_origin(client):
+    response = client.options(
+        "/bills",
+        headers={"Origin": "http://ui.test", "Access-Control-Request-Method": "POST"},
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://ui.test"
+
+
+def test_cors_blocks_other_origins(client):
+    response = client.options(
+        "/bills",
+        headers={"Origin": "http://evil.test", "Access-Control-Request-Method": "POST"},
+    )
+    assert "access-control-allow-origin" not in response.headers

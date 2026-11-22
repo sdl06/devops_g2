@@ -7,3 +7,14 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
     ports:
       - "1433:1433"
+
+  bill-service:
+    build: ./services/bill_service
+    environment:
+      DATABASE_URL: mssql+pymssql://sa:${MSSQL_SA_PASSWORD}@bill-db:1433/billdb
+      CREATE_DATABASE: "true"
+      CORS_ORIGINS: ${UI_ORIGIN:-http://localhost:8080}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - bill-db

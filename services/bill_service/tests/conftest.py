@@ -4,6 +4,7 @@ import os
 
 # db.py needs a DATABASE_URL when it is imported; tests replace the session below.
 os.environ.setdefault("DATABASE_URL", "sqlite://")
+os.environ.setdefault("CORS_ORIGINS", "http://ui.test")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

@@ -1,9 +1,11 @@
 import logging
+import os
 import sys
 import time
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -19,6 +21,16 @@ logging.basicConfig(
 logger = logging.getLogger("bill_service")
 
 app = FastAPI(title="Bill Service")
+
+# Only the UI's own address may call this service from a browser.
+# CORS_ORIGINS is a comma-separated list, e.g. "https://sdd-3a-g2-ui.azurestaticapps.net".
+cors_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type"],
+)
 
 
 @app.middleware("http")
