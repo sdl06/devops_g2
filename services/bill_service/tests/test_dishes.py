@@ -8,14 +8,21 @@ def test_dish_crud(client):
     assert client.get(f"/dishes/{dish_id}").json()["name"] == "Soup"
 
     updated = client.put(f"/dishes/{dish_id}", json={"name": "Tomato soup", "price_cents": 700})
-    assert updated.json() == {"id": dish_id, "name": "Tomato soup", "price_cents": 700, "ingredients": []}
+    assert updated.json() == {
+        "id": dish_id,
+        "name": "Tomato soup",
+        "price_cents": 700,
+        "ingredients": [],
+    }
 
     assert client.delete(f"/dishes/{dish_id}").status_code == 204
     assert client.get(f"/dishes/{dish_id}").status_code == 404
 
 
 def test_duplicate_dish_name_is_rejected(client, dish):
-    assert client.post("/dishes", json={"name": "Chicken curry", "price_cents": 1}).status_code == 409
+    assert (
+        client.post("/dishes", json={"name": "Chicken curry", "price_cents": 1}).status_code == 409
+    )
 
 
 def test_negative_price_is_rejected(client):
@@ -35,7 +42,10 @@ def test_recipe_can_be_replaced(client, dish):
 
 def test_recipe_errors(client, dish):
     chicken_id = client.get(f"/dishes/{dish['id']}").json()["ingredients"][0]["ingredient_id"]
-    duplicate = [{"ingredient_id": chicken_id, "amount": 1}, {"ingredient_id": chicken_id, "amount": 2}]
+    duplicate = [
+        {"ingredient_id": chicken_id, "amount": 1},
+        {"ingredient_id": chicken_id, "amount": 2},
+    ]
     assert client.put(f"/dishes/{dish['id']}/ingredients", json=duplicate).status_code == 400
     unknown = [{"ingredient_id": 999, "amount": 1}]
     assert client.put(f"/dishes/{dish['id']}/ingredients", json=unknown).status_code == 404

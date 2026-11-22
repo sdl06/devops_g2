@@ -59,7 +59,10 @@ def test_closed_bill_cannot_be_changed(client, table, bill, dish):
     client.post(f"/bills/{bill['id']}/close")
 
     assert add_item(client, bill["id"], dish["id"]).status_code == 409
-    assert client.put(f"/bills/{bill['id']}/items/{item['id']}", json={"quantity": 5}).status_code == 409
+    assert (
+        client.put(f"/bills/{bill['id']}/items/{item['id']}", json={"quantity": 5}).status_code
+        == 409
+    )
     assert client.delete(f"/bills/{bill['id']}/items/{item['id']}").status_code == 409
     assert client.put(f"/bills/{bill['id']}", json={"table_id": table["id"]}).status_code == 409
 

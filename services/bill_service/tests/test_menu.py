@@ -39,10 +39,10 @@ def test_dish_is_not_surplus_at_exactly_the_surplus_level():
 
 def test_menu_hides_unavailable_dishes_and_puts_surplus_first():
     dishes = [
-        make_dish(1, "Soup", [(100, 500, 1000)]),           # available, normal
-        make_dish(2, "Curry", [(200, 5000, 3000)]),         # available, surplus
-        make_dish(3, "Steak", [(300, 100, 1000)]),          # out of stock
-        make_dish(4, "Bread", [(50, 500, 1000)]),           # available, normal
+        make_dish(1, "Soup", [(100, 500, 1000)]),  # available, normal
+        make_dish(2, "Curry", [(200, 5000, 3000)]),  # available, surplus
+        make_dish(3, "Steak", [(300, 100, 1000)]),  # out of stock
+        make_dish(4, "Bread", [(50, 500, 1000)]),  # available, normal
     ]
     menu = rank_menu(dishes)
     assert [item["name"] for item in menu] == ["Curry", "Bread", "Soup"]

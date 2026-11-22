@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..db import get_db
+from ..db import DbSession
 from ..models import Bill, DiningTable
 from ..schemas import BillOut, TableIn, TableOut
 
@@ -18,12 +18,12 @@ def get_table_or_404(db: Session, table_id: int) -> DiningTable:
 
 
 @router.get("", response_model=list[TableOut])
-def list_tables(db: Session = Depends(get_db)):
+def list_tables(db: DbSession):
     return db.scalars(select(DiningTable).order_by(DiningTable.id)).all()
 
 
 @router.post("", response_model=TableOut, status_code=201)
-def create_table(data: TableIn, db: Session = Depends(get_db)):
+def create_table(data: TableIn, db: DbSession):
     table = DiningTable(name=data.name)
     db.add(table)
     try:
@@ -36,12 +36,12 @@ def create_table(data: TableIn, db: Session = Depends(get_db)):
 
 
 @router.get("/{table_id}", response_model=TableOut)
-def get_table(table_id: int, db: Session = Depends(get_db)):
+def get_table(table_id: int, db: DbSession):
     return get_table_or_404(db, table_id)
 
 
 @router.put("/{table_id}", response_model=TableOut)
-def update_table(table_id: int, data: TableIn, db: Session = Depends(get_db)):
+def update_table(table_id: int, data: TableIn, db: DbSession):
     table = get_table_or_404(db, table_id)
     table.name = data.name
     try:
@@ -54,7 +54,7 @@ def update_table(table_id: int, data: TableIn, db: Session = Depends(get_db)):
 
 
 @router.delete("/{table_id}", status_code=204)
-def delete_table(table_id: int, db: Session = Depends(get_db)):
+def delete_table(table_id: int, db: DbSession):
     table = get_table_or_404(db, table_id)
     has_bills = db.scalar(select(Bill.id).where(Bill.table_id == table_id).limit(1))
     if has_bills is not None:
@@ -64,7 +64,7 @@ def delete_table(table_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{table_id}/current-bill", response_model=BillOut)
-def current_bill(table_id: int, db: Session = Depends(get_db)):
+def current_bill(table_id: int, db: DbSession):
     get_table_or_404(db, table_id)
     bill = db.scalar(select(Bill).where(Bill.table_id == table_id, Bill.status == "open"))
     if bill is None:

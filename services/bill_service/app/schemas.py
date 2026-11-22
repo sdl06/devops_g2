@@ -45,6 +45,7 @@ class BillOut(BaseModel):
     total_cents: int
     items: list[ItemOut]
 
+
 # ---------- Dishes and recipes ----------
 class RecipeLine(BaseModel):
     model_config = ConfigDict(from_attributes=True)
