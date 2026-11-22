@@ -24,9 +24,7 @@ jobs:
           cache-dependency-path: services/bill_service/requirements*.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: ruff check .
-      # TODO: remove continue-on-error after the format PR (Step 4) is merged
       - run: ruff format --check .
-        continue-on-error: true
       - run: pytest --cov=app --cov-fail-under=70
       - run: pip-audit -r requirements.txt
       - run: docker build -t bill-service:ci .
@@ -46,9 +44,7 @@ jobs:
           cache-dependency-path: services/split_service/requirements*.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: ruff check .
-      # TODO: remove continue-on-error after the format PR (Step 4) is merged
       - run: ruff format --check .
-        continue-on-error: true
       - run: coverage run --source=split_app -m unittest discover -s tests
       - run: coverage report --fail-under=70
       - run: pip-audit -r requirements.txt
