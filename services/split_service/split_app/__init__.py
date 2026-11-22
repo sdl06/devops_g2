@@ -2,9 +2,11 @@
 import os
 import secrets
 from pathlib import Path
+
 from flask import Flask, jsonify, request, session
 from flask_migrate import Migrate
 from sqlalchemy.exc import SQLAlchemyError
+
 from .models import db
 
 

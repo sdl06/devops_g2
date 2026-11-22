@@ -1,11 +1,12 @@
 import tempfile
 import unittest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 from split_app import create_app
-from split_app.models import db, Allocation, SplitSession
 from split_app.bill_service import _bill
+from split_app.models import Allocation, SplitSession, db
 
 BILL = {'id': 12, 'version': 3, 'status': 'open', 'items': [{'id': 31, 'quantity': 1, 'price_cents': 1000}]}
 

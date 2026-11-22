@@ -1,12 +1,12 @@
 """Allocation totals and tip calculations in integer cents."""
 
-from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 from .models import Allocation, Participant, Tip, db
 
 
 def _money(value):
-    return int(Decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return int(Decimal(value).quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
 def _allocations(session_id):
