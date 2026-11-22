@@ -32,6 +32,10 @@ class Bill(Base):
         back_populates="bill", cascade="all, delete-orphan"
     )
 
+    @property
+    def total_cents(self) -> int:
+        return sum(item.total_cents for item in self.items)
+
 
 class BillItem(Base):
     __tablename__ = "bill_items"

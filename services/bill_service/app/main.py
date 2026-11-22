@@ -3,6 +3,12 @@ import sys
 import time
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from .routers import bills, dishes, ingredients, tables
 
 # Send logs to stdout at INFO level (the brief asks for this, Azure collects it)
 logging.basicConfig(
@@ -35,3 +41,27 @@ async def log_requests(request: Request, call_next):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+app.include_router(tables.router)
+app.include_router(bills.router)
+app.include_router(dishes.router)
+app.include_router(ingredients.router)
+
+
+# ---------- error format: always {"error": "message"} ----------
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException):
+    return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    first = exc.errors()[0]
+    field = ".".join(str(part) for part in first["loc"] if part != "body")
+    return JSONResponse({"error": f"{field}: {first['msg']}"}, status_code=400)
+
+
+@app.exception_handler(OperationalError)
+async def database_down(request: Request, exc: OperationalError):
+    return JSONResponse({"error": "Database is unavailable. Try again shortly."}, status_code=503)
