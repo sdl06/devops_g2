@@ -21,7 +21,7 @@ Draft — may still change. Owner: Nini.
 | POST   | `/tables`                   | `{"name": "Table 4"}` | `201` table                                                             |
 | GET    | `/tables/{id}`              |                       | table                                                                   |
 | PUT    | `/tables/{id}`              | `{"name": "Table 5"}` | table                                                                   |
-| DELETE | `/tables/{id}`              |                       | `204` (`409` if it has an open bill)                                    |
+| DELETE | `/tables/{id}`              |                       | `204` (`409` if it has any bills)                                    |
 | GET    | `/tables/{id}/current-bill` |                       | the open bill for that table (`404` if none). Used by the QR guest page |
 
 Example: `{"id": 1, "name": "Table 4"}`
