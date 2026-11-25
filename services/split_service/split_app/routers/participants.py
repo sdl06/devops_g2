@@ -14,7 +14,8 @@ from .common import _body, _error, _guest, _participant, _settlement_data, api
 def _csrf_response(payload):
     token = browser_session.setdefault('csrf_token', secrets.token_urlsafe(32))
     response = jsonify(**payload, csrf_token=token)
-    response.set_cookie('csrftoken', token, secure=current_app.config['SESSION_COOKIE_SECURE'], samesite='Lax')
+    response.set_cookie('csrftoken', token, secure=current_app.config['SESSION_COOKIE_SECURE'],
+                        samesite=current_app.config['SESSION_COOKIE_SAMESITE'])
     return response
 
 
@@ -55,7 +56,8 @@ def join_session(bill_id):
         db.session.commit()
     response = jsonify(session_id=split.id, participant_id=participant.id, split_version=split.split_version)
     response.set_cookie(f'split_resume_{split.id}', participant.resume_token, httponly=True,
-                        secure=current_app.config['SESSION_COOKIE_SECURE'], samesite='Lax')
+                        secure=current_app.config['SESSION_COOKIE_SECURE'],
+                        samesite=current_app.config['SESSION_COOKIE_SAMESITE'])
     return response
 
 
