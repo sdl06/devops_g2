@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 from split_app import create_app
 from split_app.bill_service import _bill
 from split_app.models import Allocation, SplitSession, db
+from werkzeug.security import generate_password_hash
 
 BILL = {
     "id": 12,
@@ -43,6 +44,42 @@ class ViewsTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         return client, headers
+
+    def test_browser_staff_progress_requires_separate_staff_credentials(self):
+        client, _ = self.guest()
+        url = "/api/staff/bills/12/progress"
+        self.app.config.update(STAFF_USERNAME="", STAFF_PASSWORD_HASH="")
+        self.assertEqual(client.get(url).status_code, 503)
+
+        self.app.config.update(
+            STAFF_USERNAME="staff",
+            STAFF_PASSWORD_HASH=generate_password_hash("staff-test-password"),
+            STAFF_API_TOKEN="internal-test-token",
+        )
+        for credentials in (
+            {},
+            {"headers": {"Authorization": "Bearer internal-test-token"}},
+            {"auth": ("staff", "wrong-password")},
+        ):
+            response = client.get(url, **credentials)
+            self.assertEqual(response.status_code, 401)
+            self.assertIn("Basic", response.headers["WWW-Authenticate"])
+
+        response = client.get(
+            url,
+            auth=("staff", "staff-test-password"),
+            headers={"Origin": "https://guest.example.com"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assertNotIn("Access-Control-Allow-Origin", response.headers)
+        internal = client.get(
+            "/api/bills/12/progress",
+            headers={
+                "Authorization": "Bearer internal-test-token",
+            },
+        )
+        self.assertEqual(response.json, internal.json)
 
     def test_csrf_and_methods(self):
         client = self.app.test_client()

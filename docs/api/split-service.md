@@ -27,7 +27,8 @@ and `split_app/__init__.py` on 22 November 2026.
 | PUT | `/api/bills/{bill_id}/claims/{allocation_id}` | 200 | Replace your claim quantity |
 | DELETE | `/api/bills/{bill_id}/claims/{allocation_id}` | 200 | Release your claim |
 | POST | `/api/bills/{bill_id}/settlement` | 201 or 200 | Confirm simulated settlement |
-| GET | `/api/bills/{bill_id}/progress` | 200 | Read staff checkout progress |
+| GET | `/api/staff/bills/{bill_id}/progress` | 200 | Read checkout progress with staff login |
+| GET | `/api/bills/{bill_id}/progress` | 200 | Read checkout progress from another backend |
 | GET | `/api/bills/{bill_id}/participants/me` | 200 | Restore the current guest |
 
 ## Cookies and CSRF
@@ -263,9 +264,27 @@ settlement only.
 
 ## 10. Read staff progress
 
-GET `/api/bills/12/progress` with `Authorization: Bearer <STAFF_API_TOKEN>`.
-Set that environment variable on Split Service and keep its value on the staff
-backend. Missing or invalid credentials return 401. An unset token returns 503.
+From the staff UI, call `GET /api/staff/bills/12/progress` through the frontend's
+same-origin proxy. Forward the browser's `Authorization` header to Split Service.
+The route uses HTTP Basic authentication with a shared staff account. A missing
+or incorrect login returns 401 with a Basic challenge. An unconfigured login
+returns 503. Successful responses include `Cache-Control: no-store`.
+
+Set `STAFF_USERNAME` and `STAFF_PASSWORD_HASH` on Split Service. Generate the
+hash using the service's Python environment. The prompt hides the password.
+
+```sh
+python -c 'from getpass import getpass; from werkzeug.security import generate_password_hash; print(generate_password_hash(getpass("Staff password: ")))'
+```
+
+Store the hash verbatim, including its dollar signs. Serve the route over HTTPS
+and rate limit failed logins at the proxy. For a local smoke test,
+`curl -u staff http://localhost:8001/api/staff/bills/12/progress` prompts for the
+staff password.
+
+Server callers can continue using `GET /api/bills/12/progress` with
+`Authorization: Bearer <STAFF_API_TOKEN>`. Keep that token server-side.
+Both routes return the same progress fields.
 
 ```json
 {
