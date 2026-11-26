@@ -40,19 +40,24 @@ send a JSON body with `Content-Type: application/json` and the
 | `POST /api/bills/{bill_id}/tip` | Set or replace your tip. | `{"kind":"fixed","value":200}` for €2.00, or `{"kind":"percent","value":1500}` for 15% → `200`, saved `kind` and `value`. Use fixed `0` for no tip. |
 | `GET /api/bills/{bill_id}/balance` | Show what the current guest owes before settlement. | No body → `200`, `subtotal_cents`, `tip_cents`, `total_cents`, `bill_version`, `split_version`. |
 | `POST /api/bills/{bill_id}/settlement` | Confirm the displayed amount in the payment simulation. | `{"bill_version":"3","split_version":2,"amount_cents":950}` → `201` on creation or `200` on a matching retry. Returns the saved amount, confirmed versions, `needs_review`, and `settlement: "simulated"`. |
-| `GET /api/bills/{bill_id}/progress` | Show staff how much is unallocated or unsettled and whether the bill can close. | No body → `200`, `unallocated_subtotal_cents`, `allocated_unsettled_subtotal_cents`, `needs_review`, `ready_to_close`. Subtotals can be `null` when claims need review. Call through the staff backend with `Authorization: Bearer <STAFF_API_TOKEN>`. |
+| `GET /api/staff/bills/{bill_id}/progress` | Show staff how much is unallocated or unsettled and whether the bill can close. | No body → `200`, `unallocated_subtotal_cents`, `allocated_unsettled_subtotal_cents`, `needs_review`, `ready_to_close`. Subtotals can be `null` when claims need review. Use the same-origin proxy and the staff login. |
 
 For claims, copy the versions from the allocation state the guest acted on.
 Use `allocation_id` for PUT and DELETE. Quantities are decimal strings such as
 `"0.5"` for half of one unit. Money uses integer cents. Settlement advances the
 current split version, so refresh allocations or balance after confirming it.
-Keep the staff token on the server. Bill Service handles the actual close action.
+For staff progress, use the relative URL above. On a 401, direct staff to the
+endpoint in a browser tab to sign in via its Basic challenge, or send Basic
+credentials entered by staff at runtime. Keep credentials out of the bundle and
+persistent browser storage. The frontend proxy must forward `Authorization`.
+See the [staff progress setup](split-service.md#10-read-staff-progress).
+Bill Service handles the actual close action.
 
 ## Minimal browser example
 
-This uses a same-origin proxy. For a separate API origin, configure credentialed
-CORS and verify the browser will send the cookies. Split Service currently uses
-`SameSite=Lax` and does not configure CORS itself.
+This uses a same-origin proxy. If guest requests use a separate API origin,
+configure credentialed CORS and verify the browser will send the cookies.
+Keep staff progress on the frontend's own origin.
 
 ```js
 const billUrl = '/api/bills/12';

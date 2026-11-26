@@ -3,8 +3,9 @@
 import secrets
 from decimal import InvalidOperation
 
-from flask import current_app, jsonify, request
+from flask import current_app, jsonify, make_response, request
 from sqlalchemy import update
+from werkzeug.security import check_password_hash
 
 from .. import bill_service
 from ..balances import _allocations, _balance, _split_amounts, _with_tip
@@ -144,6 +145,37 @@ def staff_progress(bill_id):
     supplied = request.headers.get("Authorization", "")
     if not secrets.compare_digest(supplied.encode(), f"Bearer {expected}".encode()):
         return _error("Staff credentials required.", 401)
+    return _progress(bill_id)
+
+
+@api.get("/staff/bills/<bill_id>/progress")
+def browser_staff_progress(bill_id):
+    username = current_app.config["STAFF_USERNAME"]
+    password_hash = current_app.config["STAFF_PASSWORD_HASH"]
+    if not username or not password_hash:
+        return _error("Staff login is not configured.", 503)
+
+    auth = request.authorization
+    if (
+        auth is None
+        or auth.type != "basic"
+        or not secrets.compare_digest((auth.username or "").encode(), username.encode())
+        or not check_password_hash(password_hash, auth.password or "")
+    ):
+        return (
+            jsonify(error="Staff credentials required."),
+            401,
+            {
+                "WWW-Authenticate": 'Basic realm="EasyPay Staff", charset="UTF-8"',
+                "Cache-Control": "no-store",
+            },
+        )
+    response = make_response(_progress(bill_id))
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _progress(bill_id):
     bill = bill_service._bill(bill_id)
     if bill is None:
         return _error("Bill Service is unavailable.", 503)

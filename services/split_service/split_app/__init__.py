@@ -21,6 +21,8 @@ def create_app(config=None):
         ),
         BILL_SERVICE_URL=os.environ.get("BILL_SERVICE_URL", ""),
         STAFF_API_TOKEN=os.environ.get("STAFF_API_TOKEN", ""),
+        STAFF_USERNAME=os.environ.get("STAFF_USERNAME", ""),
+        STAFF_PASSWORD_HASH=os.environ.get("STAFF_PASSWORD_HASH", ""),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "false").lower() == "true",
