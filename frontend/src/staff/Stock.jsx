@@ -145,13 +145,15 @@ export default function Stock() {
                     <span className="badge">Normal</span>
                   )}
                 </td>
-                <td className="staff-actions">
-                  <button className="secondary" onClick={() => startEdit(ingredient)}>
-                    Edit
-                  </button>
-                  <button className="danger" onClick={() => handleDelete(ingredient)}>
-                    Delete
-                  </button>
+                <td>
+                  <div className="staff-actions">
+                    <button className="secondary" onClick={() => startEdit(ingredient)}>
+                      Edit
+                    </button>
+                    <button className="danger" onClick={() => handleDelete(ingredient)}>
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
