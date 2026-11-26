@@ -7,7 +7,6 @@
 
 const BILL_URL = import.meta.env.VITE_BILL_URL || '';
 const SPLIT_URL = import.meta.env.VITE_SPLIT_URL || '';
-const STAFF_TOKEN = import.meta.env.VITE_STAFF_TOKEN || '';
 
 // Send one request and return the JSON reply.
 // Errors from the services look like {"error": "message"}; we throw that
@@ -94,10 +93,12 @@ export const getMenu = () => bill('/menu');
 // ---------- Payment progress (Split Service, staff only) ----------
 // Returns { ready_to_close, needs_review, unallocated_subtotal_cents,
 //           allocated_unsettled_subtotal_cents }
-// TODO: agree with Sergio how the staff token is handled in production.
-export const getProgress = (billId) =>
-  split(`/api/bills/${billId}/progress`, {
-    headers: { Authorization: `Bearer ${STAFF_TOKEN}` },
+// Uses the staff login (HTTP Basic). The username and password are typed by
+// staff and only kept in memory, never in the code or in browser storage.
+// A wrong login returns 401.
+export const getProgress = (billId, login) =>
+  split(`/api/staff/bills/${billId}/progress`, {
+    headers: { Authorization: `Basic ${btoa(`${login.username}:${login.password}`)}` },
   });
 
 // ---------- Helpers ----------
